@@ -1,0 +1,51 @@
+workflows:
+  ios-poc:
+    name: iOS – rAIces POC
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: com.example.raices
+      # Las API keys se agregan en el dashboard de Codemagic (no aquí)
+      # OPENAI_API_KEY  →  Environment variables → Secret
+      # ANTHROPIC_API_KEY → Environment variables → Secret
+
+    scripts:
+      - name: Generar app_secrets.dart desde variables de entorno
+        script: |
+          mkdir -p lib/core/config
+          cat > lib/core/config/app_secrets.dart << EOF
+          class AppSecrets {
+            static const openAiKey = '${OPENAI_API_KEY}';
+            static const anthropicKey = '${ANTHROPIC_API_KEY}';
+          }
+          EOF
+
+      - name: Instalar dependencias
+        script: flutter pub get
+
+      - name: Build iOS (sin firma — para AltStore)
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Empaquetar IPA
+        script: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r rAIces.ipa Payload/
+
+    artifacts:
+      - build/ios/iphoneos/rAIces.ipa
+
+    publishing:
+      email:
+        recipients:
+          - toledonewton13@gmail.com
+        notify:
+          success: true
+          failure: true
