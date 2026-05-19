@@ -10,12 +10,12 @@ workflows:
       cocoapods: default
       vars:
         BUNDLE_ID: com.example.raices
-      # Las API keys se agregan en el dashboard de Codemagic (no aquí)
-      # OPENAI_API_KEY  →  Environment variables → Secret
-      # ANTHROPIC_API_KEY → Environment variables → Secret
+      # Agregar en Codemagic dashboard → Environment variables → Secret:
+      #   OPENAI_API_KEY
+      #   ANTHROPIC_API_KEY
 
     scripts:
-      - name: Generar app_secrets.dart desde variables de entorno
+      - name: Generar app_secrets.dart
         script: |
           mkdir -p lib/core/config
           cat > lib/core/config/app_secrets.dart << EOF
@@ -25,22 +25,42 @@ workflows:
           }
           EOF
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias Flutter
         script: flutter pub get
 
-      - name: Build iOS (sin firma — para AltStore)
+      - name: Instalar pods de iOS
+        script: |
+          cd ios
+          pod repo update
+          pod install
+          cd ..
+
+      - name: Deshabilitar firma en proyecto Xcode
+        script: |
+          # Cambiar Automatic → Manual y agregar CODE_SIGNING_ALLOWED = NO
+          sed -i '' \
+            's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;\n\t\t\t\tCODE_SIGNING_REQUIRED = NO;/g' \
+            ios/Runner.xcodeproj/project.pbxproj
+
+          # Limpiar identity de iPhone Developer
+          sed -i '' \
+            '/\"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]\" = \"iPhone Developer\";/d' \
+            ios/Runner.xcodeproj/project.pbxproj
+
+      - name: Build iOS sin firma
         script: |
           flutter build ios --release --no-codesign
 
       - name: Empaquetar IPA
         script: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
           cd build/ios/iphoneos
-          mkdir -p Payload
-          cp -r Runner.app Payload/
           zip -r rAIces.ipa Payload/
 
     artifacts:
       - build/ios/iphoneos/rAIces.ipa
+      - flutter_drive.log
 
     publishing:
       email:
