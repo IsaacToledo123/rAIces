@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\PizzaNewt\\\\Desktop\\\\jos\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter pub *)",
+      "Bash(python -c ' *)"
+    ]
+  }
+}
